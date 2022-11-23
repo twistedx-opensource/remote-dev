@@ -26,11 +26,22 @@ if [ $(command -v fswatch | wc -l) -eq 0 ]; then
     exit 1
 fi
 
+function usage() {
+    echo "usage: ${SCRIPT_NAME} <watch-dir> <target> [<ip-address>]"
+    echo "  watch-dir:  path to a local directory to watch"
+    echo "  target:     an scp target specification, e.g."
+    echo "              user@host.domain:/var/tmp"
+    echo "  ip-address: optional ip address for unsupported"
+    echo "              operating systems or VPNs"
+}
+
+if [[ "${1}" = "--help" ]]; then
+    usage
+    exit 0
+fi
+
 if [ -z "${2}" ]; then
-    echo "usage: ${SCRIPT_NAME} <watch-dir> <target>"
-    echo "  watch-dir: path to a local directory to watch"
-    echo "  target:    an scp target specification, e.g."
-    echo "             user@host.domain:/var/tmp"
+    usage
     exit 2
 fi
 
