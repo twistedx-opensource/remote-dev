@@ -26,6 +26,14 @@ if [ $(command -v fswatch | wc -l) -eq 0 ]; then
     exit 2
 fi
 
+if [ -z "${2}" ]; then
+    echo "usage: ${SCRIPT_NAME} <watch-dir> <target>"
+    echo "  watch-dir: path to a local directory to watch"
+    echo "  target:    an scp target specification, e.g."
+    echo "             user@host.domain:/var/tmp"
+    exit 1
+fi
+
 function cleanup() {
     echo ""
     echo "Exiting..."
@@ -34,8 +42,8 @@ function cleanup() {
 
 trap cleanup SIGINT
 
-WATCH_DIR="$1"
-SCP_TARGET="$2"
+WATCH_DIR="${1}"
+SCP_TARGET="${2}"
 FULL_DIR_PATH="$(realpath ${WATCH_DIR})"
 SUB_DIRECTORY="$(basename ${WATCH_DIR})"
 PARENT_DIRECTORY="$(dirname ${FULL_DIR_PATH})/"
@@ -52,14 +60,6 @@ if [[ $(echo ${SCP_TARGET} | cut -d: -f2) = '' ]]; then
     DESTINATION="~/"
 elif [[ ${DESTINATION_SUFFIX::1} == "/" ]]; then
     DESTINATION=${DESTINATION_SUFFIX}
-fi
-
-if [ -z "${SCP_TARGET}" ]; then
-    echo "usage: ${SCRIPT_NAME} <watch-dir> <target>"
-    echo "  watch-dir: path to a local directory to watch"
-    echo "  target:    an scp target specification, e.g."
-    echo "             user@host.domain:/var/tmp"
-    exit 1
 fi
 
 upload() {
