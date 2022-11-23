@@ -80,7 +80,6 @@ upload() {
     fi
 }
 
-
 echo "watching: ${WATCH_DIR}"
 echo "target:   ${SCP_TARGET}"
 echo ""
