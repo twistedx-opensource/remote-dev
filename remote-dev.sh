@@ -23,7 +23,7 @@
 if [ $(command -v fswatch | wc -l) -eq 0 ]; then
     echo "Please install the fswatch program."
     echo "See http://emcrisostomo.github.io/fswatch/"
-    exit 2
+    exit 1
 fi
 
 if [ -z "${2}" ]; then
@@ -31,7 +31,18 @@ if [ -z "${2}" ]; then
     echo "  watch-dir: path to a local directory to watch"
     echo "  target:    an scp target specification, e.g."
     echo "             user@host.domain:/var/tmp"
-    exit 1
+    exit 2
+fi
+
+if [ ! -z "${3}" ]; then
+    HOST_IP="${3}"
+elif [[ $(uname -s) = 'Linux' ]]; then
+    HOST_IP=$(cat /proc/net/dev | grep : | sort -k 2,2 | head -1 | cut -d: -f1 | awk '{print $1}')
+elif [[ $(uname -s) = 'Darwin' ]]; then
+    HOST_IP=$(ifconfig -l | xargs -n1 ipconfig getifaddr)
+else
+    echo "Your operating system is not supported"
+    exit 3
 fi
 
 function cleanup() {
@@ -48,7 +59,6 @@ FULL_DIR_PATH="$(realpath ${WATCH_DIR})"
 SUB_DIRECTORY="$(basename ${WATCH_DIR})"
 PARENT_DIRECTORY="$(dirname ${FULL_DIR_PATH})/"
 SCRIPT_NAME=$(basename $0)
-HOST_IP=$(ifconfig -l | xargs -n1 ipconfig getifaddr)
 DESTINATION="~/$(echo ${SCP_TARGET} | cut -d: -f2)/"
 DESTINATION_PREFIX=$(echo ${SCP_TARGET} | cut -d: -f1)
 DESTINATION_SUFFIX=$(echo ${SCP_TARGET} | cut -d: -f2)
@@ -84,7 +94,7 @@ echo "watching: ${WATCH_DIR}"
 echo "target:   ${SCP_TARGET}"
 echo ""
 echo "Syncing repository to ${DESTINATION_PREFIX}, please wait..."
-ssh ${DESTINATION_PREFIX} "ssh ${HOST_IP} \"tar --exclude=${WATCH_DIR}/.git --no-xattrs -cC ${PARENT_DIRECTORY} ${SUB_DIRECTORY}\" | tar -xC ${DESTINATION}" 2>&1 | grep -v 'SCHILY'
+ssh ${DESTINATION_PREFIX} "ssh $(whoami)@${HOST_IP} \"tar --exclude=${WATCH_DIR}/.git --no-xattrs -cC ${PARENT_DIRECTORY} ${SUB_DIRECTORY}\" | tar -xC ${DESTINATION}" 2>&1 | grep -v 'SCHILY'
 echo "Repository sync complete, press [ctrl + c] to exit"
 
 fswatch -e "${WATCH_DIR}/.git" -e ${0} ${WATCH_DIR} | while read f; do upload "$f"; done
