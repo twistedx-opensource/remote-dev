@@ -19,7 +19,18 @@ source ~/.bashrc
 
 ### Instructions
 
-Using the ssh-copy-id to allow for password-less ssh sessions bi-directionally between your programming device and your remote machine will provide the best experience. 
+Running the program will walk you through initial configuration.
+
+~~~
+Usage: remote-dev <watch-dir> <target> [OPTIONS...]
+  watch-dir:            path to a local directory to watch
+  target:               an scp target specification, e.g.
+                        user@host.domain:/var/tmp
+  --host-ip ip-address: optional ip address for unsupported
+                        operating systems or VPNs
+  --check-host-key:     Enforce host key checking
+  -y, --yes:            Assume yes for all prompts
+~~~
 
 ### License
 Copyright 2022 Jason Scheunemann
