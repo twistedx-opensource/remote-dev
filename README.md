@@ -12,7 +12,7 @@ Example:
 cd ~/Repositories
 git clone git@github.com:twistedx-opensource/remote-dev.git
 mkdir -p ~/.bin
-ln /home/user/Repositories/remote-dev/remote-dev.sh /home/user/.bin/remote-dev
+ln ${HOME}/Repositories/remote-dev/remote-dev.sh ${HOME}/.bin/remote-dev
 echo "PATH=~/.bin:$PATH" >> ~/.bashrc
 source ~/.bashrc
 ~~~
