@@ -38,7 +38,8 @@ function usage() {
     echo "                        user@host.domain:/var/tmp"
     echo "  --host-ip ip-address: optional ip address for unsupported"
     echo "                        operating systems or VPNs"
-    echo "  -y, --yes             Assume yes for all prompts"
+    echo "  --check-host-key:     Enforce host key checking"
+    echo "  -y, --yes:            Assume yes for all prompts"
 }
 
 VERSION=$(cat <<-END
