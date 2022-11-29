@@ -189,7 +189,7 @@ function check_setup() {
     fi
 
     if [ $(ssh ${HOST_KEY_CHECKING} ${DESTINATION_PREFIX} "ssh ${HOST_KEY_CHECKING} $(whoami)@${HOST_IP} echo \\$(realpath ${WATCH_DIR})" 2> /dev/null | grep -wc $(realpath ${WATCH_DIR})) -eq 0 ]; then
-        echo "You may be on an unexected network, add your host's IP address using the --host-ip option and run again, exiting now."
+        echo "You may be on an unexpected network, add your host's IP address using the --host-ip option and run again, exiting now."
     fi
 }
 
