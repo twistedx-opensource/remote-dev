@@ -207,11 +207,12 @@ function upload() {
         FILE_OP_LABEL="[INFO] Syncing $(basename ${FILE_NAME}) => ${SCP_TARGET%/}${PREFIX}$(echo ${FILE_NAME} | sed -e "s|${PARENT_DIRECTORY}||g") "
 
         scp "${FILE_NAME}" "${SCP_TARGET%/}${PREFIX}$(echo ${FILE_NAME} | sed -e "s|${PARENT_DIRECTORY}||g")" > /dev/null 2>&1
-        [ ${?} -eq 0 ] && printf "${FILE_OP_LABEL} [ ${GREEN_TEXT}✓${NORMAL_TEXT} ]\n" || printf "${FILE_OP_LABEL} [ ${RED_TEXT}✗${NORMAL_TEXT} ]\n"
+        [ ${?} -eq 0 ] && echo -e "\\r${FILE_OP_LABEL} [ ${GREEN_TEXT}✓${NORMAL_TEXT} ]" || echo -e "\\r${FILE_OP_LABEL} [ ${RED_TEXT}✗${NORMAL_TEXT} ]"
+        echo -n "(Press [ctrl + c] to exit)"
     fi
 }
 
-if [ $(ssh -o BatchMode=yes -o ConnectTimeout=5 -o PubkeyAuthentication=no -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o ChallengeResponseAuthentication=no ${DESTINATION_PREFIX} 2>&1 | grep -wc "Permission denied") -gt 0 ]; then
+if [ $(ssh -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=5 -o PubkeyAuthentication=no -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o ChallengeResponseAuthentication=no ${DESTINATION_PREFIX} 2>&1 | grep -wc "Permission denied") -gt 0 ]; then
     check_setup
 else
     echo "The destination server is not reachable, exiting now."
@@ -250,7 +251,6 @@ echo "[INFO] Syncing repository to ${DESTINATION_PREFIX}, please be patient..."
 ssh ${DESTINATION_PREFIX} "ssh $(whoami)@${HOST_IP} \"tar --exclude=${WATCH_DIR}/.git --no-xattrs -cC ${PARENT_DIRECTORY} ${SUB_DIRECTORY}\" | tar -xC ${DESTINATION}" 2>&1 | grep -v 'SCHILY'
 echo "[INFO] Repository sync complete"
 echo
-echo "Note: Press [ctrl + c] to quit"
-echo
+echo -n "(Press [ctrl + c] to exit)"
 
 fswatch -e "${WATCH_DIR}/.git" -e $(basename ${0}) ${WATCH_DIR} | while read f; do upload "$f"; done
