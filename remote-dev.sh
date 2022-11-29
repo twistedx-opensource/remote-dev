@@ -248,4 +248,4 @@ echo
 echo "Note: Press [ctrl + c] to quit"
 echo
 
-fswatch -e "${WATCH_DIR}/.git" -e ${0} ${WATCH_DIR} | while read f; do upload "$f"; done
+fswatch -e "${WATCH_DIR}/.git" -e $(basename ${0}) ${WATCH_DIR} | while read f; do upload "$f"; done
