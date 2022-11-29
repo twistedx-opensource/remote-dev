@@ -76,6 +76,7 @@ DESTINATION_SUFFIX=$(echo ${SCP_TARGET} | cut -d: -f2)
 RED_TEXT="\033[0;31m"
 GREEN_TEXT="\033[0;32m"
 NORMAL_TEXT="\033[0m"
+HOST_KEY_CHECKING="-o StrictHostKeyChecking=no"
 
 if [[ $(echo ${SCP_TARGET} | cut -d: -f2) = '' ]]; then
     DESTINATION="~/"
@@ -101,11 +102,82 @@ upload() {
     fi
 }
 
-echo "watching: ${WATCH_DIR}"
+function setup() {
+    echo "Verifying setup, please be patient..."
+
+    if [ $(ssh ${HOST_KEY_CHECKING} ${DESTINATION_PREFIX} "ssh ${HOST_KEY_CHECKING} $(whoami)@${HOST_IP} echo \\$(realpath ${WATCH_DIR})" 2> /dev/null | grep -wc $(realpath ${WATCH_DIR})) -eq 0 ]; then
+        if [ $(ssh ${DESTINATION_PREFIX} "[ -d \$(echo ${DESTINATION} | sed 's/~/\\\${HOME}/') ] && echo 1" | wc -l) -eq 0 ]; then
+            read -p "The destination directory \"${DESTINATION}\" does not exist, would you like to fix this issue now [Y/n]? " CONFIRM
+
+            if [[ ! "${CONFIRM}" =~ [Nn](o)? ]]; then
+                ssh ${DESTINATION_PREFIX} "mkdir -p ${DESTINATION}"
+            fi
+
+            if [ $(ssh ${DESTINATION_PREFIX} "[ -d \$(echo ${DESTINATION} | sed 's/~/\\\${HOME}/') ] && echo 1" | wc -l) -eq 0 ]; then
+                echo "You must create \"${DESTINATION}\" on the remote computer before continuing, exiting now."
+                exit 1
+            fi
+        fi
+
+        if [ $(ssh ${DESTINATION_PREFIX} "[ -f \${HOME}/.ssh/id_rsa.* ] && echo 1" | wc -l) -eq 0 ]; then
+            read -p "User SSH keys do not exist on the remote host (${DESTINATION_PREFIX}), would you like to fix this issue now [Y/n]? " CONFIRM
+
+            if [[ ! "${CONFIRM}" =~ [Nn](o)? ]]; then
+                echo "Generating ssh keys, please be patient..."
+                ssh ${DESTINATION_PREFIX} "ssh-keygen -t rsa -q -f \"\${HOME}/.ssh/id_rsa\" -N \"\""
+            else
+                echo "SSH keys must be generated on the destiation server before continuing, exiting now."
+                exit 1
+            fi
+        fi
+
+        SSH_CERT=$(ssh ${DESTINATION_PREFIX} "cat \${HOME}/.ssh/id_rsa.pub")
+
+        if [ $(grep -wc "${SSH_CERT}" ~/.ssh/authorized_keys) -eq 0 ]; then
+            read -p "User SSH keys from ${DESTINATION_PREFIX} not present in this host's ${HOME}/.ssh/authorized_keys file, would you like to fix this issue now [Y/n]? "  CONFIRM
+
+            if [[ ! "${CONFIRM}" =~ [Nn](o)? ]]; then
+                echo "${SSH_CERT}" >> ~/.ssh/authorized_keys
+            else
+                echo "User SSH keys must be added to this host's ${HOME}/.ssh/authorized_keys file before continuing, exiting now."
+                exit 1
+            fi
+        fi
+
+        if [ $(ssh ${HOST_KEY_CHECKING} ${DESTINATION_PREFIX} "ssh ${HOST_KEY_CHECKING} $(whoami)@${HOST_IP} echo \\$(realpath ${WATCH_DIR})" 2> /dev/null | grep -wc $(realpath ${WATCH_DIR})) -eq 0 ]; then
+            echo "Error during initial configuration"
+            exit 1
+        fi
+    fi
+
+    if [ $(ssh ${HOST_KEY_CHECKING} ${DESTINATION_PREFIX} "ssh ${HOST_KEY_CHECKING} $(whoami)@${HOST_IP} echo \\$(realpath ${WATCH_DIR})" 2> /dev/null | grep -wc $(realpath ${WATCH_DIR})) -eq 0 ]; then
+        echo "You may be on an unexected network, add your host's IP address as the third command line argument and run again, exiting now"
+    fi
+
+}
+
+setup
+
+if [ $(ssh ${DESTINATION_PREFIX} "[ -d \$(echo ${DESTINATION} | sed 's/~/\\\${HOME}/') ] && echo 1" | wc -l) -eq 0 ]; then
+    read -p "The destination directory \"${DESTINATION}\" does not exist, would you like to fix this issue now [Y/n]? " CONFIRM
+
+    if [[ ! "${CONFIRM}" =~ [Nn](o)? ]]; then
+        ssh ${DESTINATION_PREFIX} "mkdir -p ${DESTINATION}"
+    fi
+
+    if [ $(ssh ${DESTINATION_PREFIX} "[ -d \$(echo ${DESTINATION} | sed 's/~/\\\${HOME}/') ] && echo 1" | wc -l) -eq 0 ]; then
+        echo "You must create \"${DESTINATION}\" on the remote computer before continuing, exiting now."
+        exit 1
+    fi
+fi
+
+echo
+echo "watching: ${FULL_DIR_PATH}"
 echo "target:   ${SCP_TARGET}"
 echo ""
 echo "Syncing repository to ${DESTINATION_PREFIX}, please wait..."
 ssh ${DESTINATION_PREFIX} "ssh $(whoami)@${HOST_IP} \"tar --exclude=${WATCH_DIR}/.git --no-xattrs -cC ${PARENT_DIRECTORY} ${SUB_DIRECTORY}\" | tar -xC ${DESTINATION}" 2>&1 | grep -v 'SCHILY'
 echo "Repository sync complete, press [ctrl + c] to exit"
+echo
 
 fswatch -e "${WATCH_DIR}/.git" -e ${0} ${WATCH_DIR} | while read f; do upload "$f"; done
