@@ -48,6 +48,8 @@ fi
 if [ ! -z "${3}" ]; then
     HOST_IP="${3}"
 elif [[ $(uname -s) = 'Linux' ]]; then
+    echo "Operation on Linux has not been verified, exiting"
+    exit 1
     HOST_IP=$(cat /proc/net/dev | grep : | sort -k 2,2 | head -1 | cut -d: -f1 | awk '{print $1}')
 elif [[ $(uname -s) = 'Darwin' ]]; then
     HOST_IP=$(ifconfig -l | xargs -n1 ipconfig getifaddr)
