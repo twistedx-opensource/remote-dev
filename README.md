@@ -2,7 +2,7 @@
 Simple program for making it easy to perform remote dev work, such as developing on a Raspberry Pi. The purpose is to automatically sync the project repository as you work.
 
 ## Background
-This script was adopted from glaszig (https://gist.github.com/glaszig/673691a6ba7bdc8e3d054d826a179976#file-fswatch-scp-sh). Adaptations were made to sync the repository on program launch using an ssh copy that makes use of tar.
+This script was inspired from a similar purposed script by glaszig (https://gist.github.com/glaszig/673691a6ba7bdc8e3d054d826a179976#file-fswatch-scp-sh). I added the an initial sync at launch using ssh to transfer an in-memory tarball of the local project, as well as logging.
 
 ## Installation
 It is recommended to clone this repository to your local computer then symlink the remote-dev.sh file to a directory available in your system path. I like to create a .bin folder in my home directory then add to my PATH variable in my .bashrc file.
