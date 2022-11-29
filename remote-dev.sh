@@ -132,7 +132,7 @@ elif [[ ${DESTINATION_SUFFIX::1} == "/" ]]; then
     DESTINATION=${DESTINATION_SUFFIX}
 fi
 
-function setup() {
+function check_setup() {
     echo "Verifying setup, please be patient..."
 
     if [ $(ssh ${HOST_KEY_CHECKING} ${DESTINATION_PREFIX} "ssh ${HOST_KEY_CHECKING} $(whoami)@${HOST_IP} echo \\$(realpath ${WATCH_DIR})" 2> /dev/null | grep -wc $(realpath ${WATCH_DIR})) -eq 0 ]; then
@@ -211,7 +211,12 @@ function upload() {
     fi
 }
 
-setup
+if [ $(ssh -o BatchMode=yes -o ConnectTimeout=5 -o PubkeyAuthentication=no -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o ChallengeResponseAuthentication=no ${DESTINATION_PREFIX} 2>&1 | grep -wc "Permission denied") -gt 0 ]; then
+    check_setup
+else
+    echo "The destination server is not reachable, exiting now."
+    exit 1
+fi
 
 if [ $(ssh ${DESTINATION_PREFIX} "[ -d \$(echo ${DESTINATION} | sed 's/~/\\\${HOME}/') ] && echo 1" | wc -l) -eq 0 ]; then
     if [ -z "${ASSUME_YES}" ]; then
