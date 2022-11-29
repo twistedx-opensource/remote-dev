@@ -20,6 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+SCRIPT_FULL_PATH="$(realpath "${0}")"
+SCRIPT_DIR_PATH="$(dirname ${SCRIPT_FULL_PATH})"
+SCRIPT_NAME="$(basename "${SCRIPT_FULL_PATH%.*}")"
+SCRIPT_VERSION="0.1.0"
+
 if [ $(command -v fswatch | wc -l) -eq 0 ]; then
     echo "Please install the fswatch program."
     echo "See http://emcrisostomo.github.io/fswatch/"
@@ -27,12 +32,13 @@ if [ $(command -v fswatch | wc -l) -eq 0 ]; then
 fi
 
 function usage() {
-    echo "usage: ${SCRIPT_NAME} <watch-dir> <target> [<ip-address>]"
-    echo "  watch-dir:  path to a local directory to watch"
-    echo "  target:     an scp target specification, e.g."
-    echo "              user@host.domain:/var/tmp"
-    echo "  ip-address: optional ip address for unsupported"
-    echo "              operating systems or VPNs"
+    echo "Usage: ${SCRIPT_NAME} <watch-dir> <target> [OPTIONS...]"
+    echo "  watch-dir:            path to a local directory to watch"
+    echo "  target:               an scp target specification, e.g."
+    echo "                        user@host.domain:/var/tmp"
+    echo "  --host-ip ip-address: optional ip address for unsupported"
+    echo "                        operating systems or VPNs"
+    echo "  -y, --yes             Assume yes for all prompts"
 }
 
 if [[ ! -d "${1}" ]]; then
@@ -45,18 +51,16 @@ if [ -z "${2}" ]; then
     exit 2
 fi
 
-if [ ! -z "${3}" ]; then
-    HOST_IP="${3}"
-elif [[ $(uname -s) = 'Linux' ]]; then
-    echo "Operation on Linux has not been verified, exiting"
-    exit 1
-    HOST_IP=$(cat /proc/net/dev | grep : | sort -k 2,2 | head -1 | cut -d: -f1 | awk '{print $1}')
-elif [[ $(uname -s) = 'Darwin' ]]; then
-    HOST_IP=$(ifconfig -l | xargs -n1 ipconfig getifaddr)
-else
-    echo "Your operating system is not supported"
-    exit 3
-fi
+VERSION=$(cat <<-END
+${SCRIPT_NAME} v${SCRIPT_VERSION}
+Copyright (C) $(date +'%Y') Jason Scheunemann
+END
+)
+
+
+function version() {
+    echo -e "${VERSION}"
+}
 
 WATCH_DIR="${1}"
 SCP_TARGET="${2}"
@@ -71,6 +75,47 @@ RED_TEXT="\033[0;31m"
 GREEN_TEXT="\033[0;32m"
 NORMAL_TEXT="\033[0m"
 HOST_KEY_CHECKING="-o StrictHostKeyChecking=no"
+
+shift
+shift
+
+POSITIONAL=()
+while [[ ${#} -gt 0 ]]; do
+    key="${1}"
+
+    case ${key} in
+        -h | --help)
+            usage
+            exit 0;;
+        -v | --version)
+            version
+            exit 0;;
+        -y | --yes)
+            ASSUME_YES=1
+            shift;;
+        --host-ip)
+            HOST_IP="${2}"
+            shift
+            shift;;
+        *)
+            printf "Unknown option ${1}, "
+            help
+            exit 1;
+   esac
+done
+
+if [ -z "${HOST_IP}" ]; then
+    if [[ $(uname -s) = 'Linux' ]]; then
+        echo "Operation on Linux has not been verified. Use the --ip-address fommand line arguement, exiting now."
+        exit 1
+        HOST_IP=$(cat /proc/net/dev | grep : | sort -k 2,2 | head -1 | cut -d: -f1 | awk '{print $1}')
+    elif [[ $(uname -s) = 'Darwin' ]]; then
+        HOST_IP=$(ifconfig -l | xargs -n1 ipconfig getifaddr)
+    else
+        echo "Your operating system is not supported"
+        exit 3
+    fi
+fi
 
 if [[ $(echo ${SCP_TARGET} | cut -d: -f2) = '' ]]; then
     DESTINATION="~/"
@@ -101,9 +146,12 @@ function setup() {
 
     if [ $(ssh ${HOST_KEY_CHECKING} ${DESTINATION_PREFIX} "ssh ${HOST_KEY_CHECKING} $(whoami)@${HOST_IP} echo \\$(realpath ${WATCH_DIR})" 2> /dev/null | grep -wc $(realpath ${WATCH_DIR})) -eq 0 ]; then
         if [ $(ssh ${DESTINATION_PREFIX} "[ -d \$(echo ${DESTINATION} | sed 's/~/\\\${HOME}/') ] && echo 1" | wc -l) -eq 0 ]; then
-            read -p "The destination directory \"${DESTINATION}\" does not exist, would you like to fix this issue now [Y/n]? " CONFIRM
+            if [ -z "${ASSUME_YES}" ]; then
+                read -p "The destination directory \"${DESTINATION}\" does not exist, would you like to fix this issue now [Y/n]? " CONFIRM
+            fi
 
-            if [[ ! "${CONFIRM}" =~ [Nn](o)? ]]; then
+            if [ ! -z "${ASSUME_YES}" ] || [[ ! "${CONFIRM}" =~ [Nn](o)? ]]; then
+                echo "[INFO] Creating ${DESTINATION} on ${DESTINATION_PREFIX}"
                 ssh ${DESTINATION_PREFIX} "mkdir -p ${DESTINATION}"
             fi
 
@@ -114,13 +162,15 @@ function setup() {
         fi
 
         if [ $(ssh ${DESTINATION_PREFIX} "[ -f \${HOME}/.ssh/id_rsa.* ] && echo 1" | wc -l) -eq 0 ]; then
-            read -p "User SSH keys do not exist on the remote host (${DESTINATION_PREFIX}), would you like to fix this issue now [Y/n]? " CONFIRM
+            if [ -z "${ASSUME_YES}" ]; then
+                read -p "User SSH keys do not exist on the remote host (${DESTINATION_PREFIX}), would you like to fix this issue now [Y/n]? " CONFIRM
+            fi
 
-            if [[ ! "${CONFIRM}" =~ [Nn](o)? ]]; then
-                echo "Generating ssh keys, please be patient..."
+            if [ ! -z "${ASSUME_YES}" ] || [[ ! "${CONFIRM}" =~ [Nn](o)? ]]; then
+                echo "[INFO] Generating user SSH keys on ${DESTINATION_PREFIX}"
                 ssh ${DESTINATION_PREFIX} "ssh-keygen -t rsa -q -f \"\${HOME}/.ssh/id_rsa\" -N \"\""
             else
-                echo "SSH keys must be generated on the destiation server before continuing, exiting now."
+                echo "SSH keys must be generated on the destination server before continuing, exiting now."
                 exit 1
             fi
         fi
@@ -128,9 +178,12 @@ function setup() {
         SSH_CERT=$(ssh ${DESTINATION_PREFIX} "cat \${HOME}/.ssh/id_rsa.pub")
 
         if [ $(grep -wc "${SSH_CERT}" ~/.ssh/authorized_keys) -eq 0 ]; then
-            read -p "User SSH keys from ${DESTINATION_PREFIX} not present in this host's ${HOME}/.ssh/authorized_keys file, would you like to fix this issue now [Y/n]? "  CONFIRM
+            if [ -z "${ASSUME_YES}" ]; then
+                read -p "User SSH keys from ${DESTINATION_PREFIX} not present in this host's ${HOME}/.ssh/authorized_keys file, would you like to fix this issue now [Y/n]? "  CONFIRM
+            fi
 
-            if [[ ! "${CONFIRM}" =~ [Nn](o)? ]]; then
+            if [ ! -z "${ASSUME_YES}" ] || [[ ! "${CONFIRM}" =~ [Nn](o)? ]]; then
+                echo "[INFO] Adding the user's SSH keys from ${DESTINATION_PREFIX} to this host's ${HOME}/.ssh/authorized_keys file"
                 echo "${SSH_CERT}" >> ~/.ssh/authorized_keys
             else
                 echo "User SSH keys must be added to this host's ${HOME}/.ssh/authorized_keys file before continuing, exiting now."
@@ -153,9 +206,12 @@ function setup() {
 setup
 
 if [ $(ssh ${DESTINATION_PREFIX} "[ -d \$(echo ${DESTINATION} | sed 's/~/\\\${HOME}/') ] && echo 1" | wc -l) -eq 0 ]; then
-    read -p "The destination directory \"${DESTINATION}\" does not exist, would you like to fix this issue now [Y/n]? " CONFIRM
+    if [ -z "${ASSUME_YES}" ]; then
+        read -p "The destination directory \"${DESTINATION}\" does not exist, would you like to fix this issue now [Y/n]? " CONFIRM
+    fi
 
-    if [[ ! "${CONFIRM}" =~ [Nn](o)? ]]; then
+    if [ ! -z "${ASSUME_YES}" ] || [[ ! "${CONFIRM}" =~ [Nn](o)? ]]; then
+        echo "[INFO] Creating ${DESTINATION} on ${DESTINATION_PREFIX}"
         ssh ${DESTINATION_PREFIX} "mkdir -p ${DESTINATION}"
     fi
 
@@ -177,7 +233,7 @@ echo
 echo "watching: ${FULL_DIR_PATH}"
 echo "target:   ${SCP_TARGET}"
 echo ""
-echo "[INFO] Syncing repository to ${DESTINATION_PREFIX}, please wait..."
+echo "[INFO] Syncing repository to ${DESTINATION_PREFIX}, please be patient..."
 ssh ${DESTINATION_PREFIX} "ssh $(whoami)@${HOST_IP} \"tar --exclude=${WATCH_DIR}/.git --no-xattrs -cC ${PARENT_DIRECTORY} ${SUB_DIRECTORY}\" | tar -xC ${DESTINATION}" 2>&1 | grep -v 'SCHILY'
 echo "[INFO] Repository sync complete"
 echo
