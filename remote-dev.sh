@@ -28,6 +28,7 @@ SCRIPT_VERSION="0.1.0"
 if [ $(command -v fswatch | wc -l) -eq 0 ]; then
     echo "Please install the fswatch program."
     echo "See http://emcrisostomo.github.io/fswatch/"
+    echo "Install with \"brew install fswatch\" on macos"
     exit 1
 fi
 
