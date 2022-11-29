@@ -102,6 +102,9 @@ while [[ ${#} -gt 0 ]]; do
             HOST_IP="${2}"
             shift
             shift;;
+        --check-host-key)
+            unset HOST_KEY_CHECKING
+            shift;;
         *)
             printf "Unknown option ${1}, "
             help
