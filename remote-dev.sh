@@ -41,16 +41,6 @@ function usage() {
     echo "  -y, --yes             Assume yes for all prompts"
 }
 
-if [[ ! -d "${1}" ]]; then
-    usage
-    exit 0
-fi
-
-if [ -z "${2}" ]; then
-    usage
-    exit 2
-fi
-
 VERSION=$(cat <<-END
 ${SCRIPT_NAME} v${SCRIPT_VERSION}
 Copyright (C) $(date +'%Y') Jason Scheunemann
@@ -61,6 +51,21 @@ END
 function version() {
     echo -e "${VERSION}"
 }
+
+if [[ "${1}" =~ "-v"|"--version" ]]; then
+    version
+    exit 0
+fi
+
+if [[ ! -d "${1}" ]]; then
+    usage
+    exit 0
+fi
+
+if [ -z "${2}" ]; then
+    usage
+    exit 2
+fi
 
 WATCH_DIR="${1}"
 SCP_TARGET="${2}"
