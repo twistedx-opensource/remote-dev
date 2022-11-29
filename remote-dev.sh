@@ -95,7 +95,7 @@ upload() {
             PREFIX="/"
         fi
 
-        FILE_OP_LABEL="Syncing $(basename ${FILE_NAME}) => ${SCP_TARGET%/}${PREFIX}$(echo ${FILE_NAME} | sed -e "s|${PARENT_DIRECTORY}||g") "
+        FILE_OP_LABEL="[INFO] Syncing $(basename ${FILE_NAME}) => ${SCP_TARGET%/}${PREFIX}$(echo ${FILE_NAME} | sed -e "s|${PARENT_DIRECTORY}||g") "
 
         scp "${FILE_NAME}" "${SCP_TARGET%/}${PREFIX}$(echo ${FILE_NAME} | sed -e "s|${PARENT_DIRECTORY}||g")" > /dev/null 2>&1
         [ ${?} -eq 0 ] && printf "${FILE_OP_LABEL} [ ${GREEN_TEXT}✓${NORMAL_TEXT} ]\n" || printf "${FILE_OP_LABEL} [ ${RED_TEXT}✗${NORMAL_TEXT} ]\n"
@@ -175,9 +175,11 @@ echo
 echo "watching: ${FULL_DIR_PATH}"
 echo "target:   ${SCP_TARGET}"
 echo ""
-echo "Syncing repository to ${DESTINATION_PREFIX}, please wait..."
+echo "[INFO] Syncing repository to ${DESTINATION_PREFIX}, please wait..."
 ssh ${DESTINATION_PREFIX} "ssh $(whoami)@${HOST_IP} \"tar --exclude=${WATCH_DIR}/.git --no-xattrs -cC ${PARENT_DIRECTORY} ${SUB_DIRECTORY}\" | tar -xC ${DESTINATION}" 2>&1 | grep -v 'SCHILY'
-echo "Repository sync complete, press [ctrl + c] to exit"
+echo "[INFO] Repository sync complete"
+echo
+echo "Note: Press [ctrl + c] to quit"
 echo
 
 fswatch -e "${WATCH_DIR}/.git" -e ${0} ${WATCH_DIR} | while read f; do upload "$f"; done
