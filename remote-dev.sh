@@ -35,7 +35,7 @@ function usage() {
     echo "              operating systems or VPNs"
 }
 
-if [[ "${1}" = "--help" ]]; then
+if [[ ! -d "${1}" ]]; then
     usage
     exit 0
 fi
@@ -57,14 +57,6 @@ else
     echo "Your operating system is not supported"
     exit 3
 fi
-
-function cleanup() {
-    echo ""
-    echo "Exiting..."
-    exit 0
-}
-
-trap cleanup SIGINT
 
 WATCH_DIR="${1}"
 SCP_TARGET="${2}"
@@ -172,6 +164,14 @@ if [ $(ssh ${DESTINATION_PREFIX} "[ -d \$(echo ${DESTINATION} | sed 's/~/\\\${HO
         exit 1
     fi
 fi
+
+function cleanup() {
+    echo ""
+    echo "Exiting..."
+    exit 0
+}
+
+trap cleanup SIGINT
 
 echo
 echo "watching: ${FULL_DIR_PATH}"
