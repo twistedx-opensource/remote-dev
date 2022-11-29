@@ -49,7 +49,6 @@ Copyright (C) $(date +'%Y') Jason Scheunemann
 END
 )
 
-
 function version() {
     echo -e "${VERSION}"
 }
@@ -133,24 +132,6 @@ elif [[ ${DESTINATION_SUFFIX::1} == "/" ]]; then
     DESTINATION=${DESTINATION_SUFFIX}
 fi
 
-upload() {
-    FILE_NAME=${1}
-
-    if [[ $(echo ${FILE_NAME} | grep '/.git/' | wc -l) -eq 0 ]]; then
-        # Hackery to get around the differences between relative and absolute paths
-        PREFIX=''
-
-        if [[ ! $(echo ${SCP_TARGET} | cut -d: -f2) = '' ]]; then
-            PREFIX="/"
-        fi
-
-        FILE_OP_LABEL="[INFO] Syncing $(basename ${FILE_NAME}) => ${SCP_TARGET%/}${PREFIX}$(echo ${FILE_NAME} | sed -e "s|${PARENT_DIRECTORY}||g") "
-
-        scp "${FILE_NAME}" "${SCP_TARGET%/}${PREFIX}$(echo ${FILE_NAME} | sed -e "s|${PARENT_DIRECTORY}||g")" > /dev/null 2>&1
-        [ ${?} -eq 0 ] && printf "${FILE_OP_LABEL} [ ${GREEN_TEXT}✓${NORMAL_TEXT} ]\n" || printf "${FILE_OP_LABEL} [ ${RED_TEXT}✗${NORMAL_TEXT} ]\n"
-    fi
-}
-
 function setup() {
     echo "Verifying setup, please be patient..."
 
@@ -209,6 +190,24 @@ function setup() {
 
     if [ $(ssh ${HOST_KEY_CHECKING} ${DESTINATION_PREFIX} "ssh ${HOST_KEY_CHECKING} $(whoami)@${HOST_IP} echo \\$(realpath ${WATCH_DIR})" 2> /dev/null | grep -wc $(realpath ${WATCH_DIR})) -eq 0 ]; then
         echo "You may be on an unexected network, add your host's IP address using the --host-ip option and run again, exiting now."
+    fi
+}
+
+function upload() {
+    FILE_NAME=${1}
+
+    if [[ $(echo ${FILE_NAME} | grep '/.git/' | wc -l) -eq 0 ]]; then
+        # Hackery to get around the differences between relative and absolute paths
+        PREFIX=''
+
+        if [[ ! $(echo ${SCP_TARGET} | cut -d: -f2) = '' ]]; then
+            PREFIX="/"
+        fi
+
+        FILE_OP_LABEL="[INFO] Syncing $(basename ${FILE_NAME}) => ${SCP_TARGET%/}${PREFIX}$(echo ${FILE_NAME} | sed -e "s|${PARENT_DIRECTORY}||g") "
+
+        scp "${FILE_NAME}" "${SCP_TARGET%/}${PREFIX}$(echo ${FILE_NAME} | sed -e "s|${PARENT_DIRECTORY}||g")" > /dev/null 2>&1
+        [ ${?} -eq 0 ] && printf "${FILE_OP_LABEL} [ ${GREEN_TEXT}✓${NORMAL_TEXT} ]\n" || printf "${FILE_OP_LABEL} [ ${RED_TEXT}✗${NORMAL_TEXT} ]\n"
     fi
 }
 
