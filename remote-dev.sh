@@ -243,14 +243,14 @@ function cleanup() {
 
 trap cleanup SIGINT
 
-echo ""
+echo
 echo "watching: ${FULL_DIR_PATH}"
 echo "target:   ${SCP_TARGET}"
 echo ""
 echo "[INFO] Syncing repository to ${DESTINATION_PREFIX}, please be patient..."
 ssh ${DESTINATION_PREFIX} "ssh $(whoami)@${HOST_IP} \"tar --exclude=${WATCH_DIR}/.git --no-xattrs -cC ${PARENT_DIRECTORY} ${SUB_DIRECTORY}\" | tar -xC ${DESTINATION}" 2>&1 | grep -v 'SCHILY'
 echo "[INFO] Repository sync complete"
-echo ""
+echo
 echo -n "(Press [ctrl + c] to exit)"
 
 fswatch -e "${WATCH_DIR}/.git" -e $(basename ${0}) ${WATCH_DIR} | while read f; do upload "$f"; done
